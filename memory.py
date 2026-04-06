@@ -247,7 +247,7 @@ class FailureInjectorApp:
                 self.log(f"Error saving failures: {e}")
 
     def on_close(self):
-        self.save_failures()
+        # Removed saving failures on close to prevent issues
         self.running = False
         self.master.destroy()
 
