@@ -42,6 +42,7 @@ class FailureInjectorApp:
         self.create_failure_page()
         self.create_settings_page()
         self.create_readme_page()
+        self.create_failure_log_page()  # New tab for all failures
 
         # Thread control
         self.running = False
@@ -109,6 +110,13 @@ class FailureInjectorApp:
         label = ttk.Label(frame, text=text, justify='left')
         label.pack(padx=10, pady=10)
 
+    def create_failure_log_page(self):
+        # New tab for all triggered failures
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="Failure Log")
+        self.failure_log_text = scrolledtext.ScrolledText(frame, width=80, height=15, state='disabled')
+        self.failure_log_text.pack(padx=5, pady=5)
+
     def log(self, message):
         self.log_area.config(state='normal')
         self.log_area.insert(tk.END, message + "\n")
@@ -116,10 +124,28 @@ class FailureInjectorApp:
         self.log_area.config(state='disabled')
         logging.info(message)
 
+    def record_failure_triggered(self, failure_type):
+        # Record and display in failure log tab
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        entry = f"{timestamp} - {failure_type}"
+        self.failure_log_text.config(state='normal')
+        self.failure_log_text.insert(tk.END, entry + "\n")
+        self.failure_log_text.see(tk.END)
+        self.failure_log_text.config(state='disabled')
+
+        # Also update failures dict
+        reg = self.registration
+        if reg not in self.failures_dict:
+            self.failures_dict[reg] = set()
+        self.failures_dict[reg].add(failure_type)
+
+        # Save to json
+        self.save_failures()
+
     def toggle_injection(self):
         if not self.running:
-            # Get settings
             try:
+                # get user settings
                 prob = float(self.probability_var.get())
                 interval = float(self.interval_var.get())
                 if not (0 <= prob <= 1):
@@ -130,7 +156,6 @@ class FailureInjectorApp:
             except Exception as e:
                 self.log(f"Invalid settings: {e}")
                 return
-
             self.running = True
             self.start_button.config(text="Stop")
             self.thread = threading.Thread(target=self.run_injection, daemon=True)
@@ -161,6 +186,8 @@ class FailureInjectorApp:
         try:
             sock.sendto(message.encode(), (XPLANE_IP, XPLANE_PORT))
             self.log(f"{self.registration}: Sent failure: {message}")
+            # Record this triggered failure
+            self.record_failure_triggered(failure_type)
         except Exception as e:
             self.log(f"Error sending failure: {e}")
         if sock_created:
@@ -169,12 +196,6 @@ class FailureInjectorApp:
     def manual_failure(self, failure_type):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.send_failure(failure_type, sock)
-        # Remember this failure
-        reg = self.registration
-        if reg not in self.failures_dict:
-            self.failures_dict[reg] = set()
-        self.failures_dict[reg].add(failure_type)
-        self.log(f"Recorded failure '{failure_type}' for registration '{reg}'.")
 
     def change_registration(self):
         new_reg = simpledialog.askstring("Change Registration", "Enter new registration code:", initialvalue=self.registration)
@@ -187,12 +208,10 @@ class FailureInjectorApp:
     def clear_failures(self):
         self.failures_dict[self.registration] = set()
         self.log(f"Cleared all failures for registration '{self.registration}'.")
+        self.save_failures()
 
     def save_settings(self):
-        # Save the current settings if needed
-        # For now, just update the variables
         self.log("Settings saved.")
-        # Could add to persist other settings if needed
 
     def load_failures(self):
         if os.path.exists(FAILURES_FILE):
@@ -217,7 +236,7 @@ class FailureInjectorApp:
         self.running = False
         self.master.destroy()
 
-# Main execution
+# Main
 def prompt_registration():
     root = tk.Tk()
     root.withdraw()
