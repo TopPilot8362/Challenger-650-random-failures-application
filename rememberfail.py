@@ -5,12 +5,15 @@ import threading
 import tkinter as tk
 from tkinter import scrolledtext, simpledialog
 import logging
+import json
+import os
 
 # Configuration defaults
 XPLANE_IP = '127.0.0.1'
 XPLANE_PORT = 49000
 FAILURE_PROBABILITY = 0.001
 CHECK_INTERVAL = 300
+FAILURES_FILE = 'failures.json'
 
 FAILURE_TYPES = ['HYDRAULIC', 'ELECTRICAL', 'AVIONICS', 'FUEL']
 
@@ -25,8 +28,8 @@ class FailureInjectorApp:
         self.thread = None
         self.registration = registration
 
-        # Dictionary to store failures per registration
-        self.failures_dict = {self.registration: set()}
+        # Load failures from file if exists
+        self.failures_dict = self.load_failures()
 
         # GUI Elements
         self.start_button = tk.Button(master, text="Start", command=self.toggle_injection)
@@ -71,6 +74,27 @@ class FailureInjectorApp:
 
         # Close event
         self.master.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def load_failures(self):
+        if os.path.exists(FAILURES_FILE):
+            try:
+                with open(FAILURES_FILE, 'r') as f:
+                    data = json.load(f)
+                # Convert lists to sets
+                return {reg: set(fails) for reg, fails in data.items()}
+            except Exception as e:
+                self.log(f"Error loading failures: {e}")
+                return {}
+        return {}
+
+    def save_failures(self):
+        # Convert sets to lists for JSON serialization
+        serializable_data = {reg: list(fails) for reg, fails in self.failures_dict.items()}
+        try:
+            with open(FAILURES_FILE, 'w') as f:
+                json.dump(serializable_data, f)
+        except Exception as e:
+            self.log(f"Error saving failures: {e}")
 
     def log(self, message):
         self.log_area.config(state='normal')
@@ -158,6 +182,8 @@ class FailureInjectorApp:
         self.log(f"Cleared all failures for registration '{reg}'.")
 
     def on_close(self):
+        """Save failures and close."""
+        self.save_failures()
         self.running = False
         self.master.destroy()
 
