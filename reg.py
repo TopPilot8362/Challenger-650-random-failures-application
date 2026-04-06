@@ -148,7 +148,7 @@ def prompt_registration():
     if reg:
         return reg
     else:
-        return "G-WARY"  # Default if user cancels or enters nothing
+        return "2-CUTE"  # Default if user cancels or enters nothing
 
 if __name__ == "__main__":
     registration_code = prompt_registration()
