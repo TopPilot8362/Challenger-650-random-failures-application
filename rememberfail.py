@@ -91,9 +91,12 @@ class FailureInjectorApp:
         interval_entry = ttk.Spinbox(frame, from_=1, to=3600, increment=1, textvariable=self.interval_var, width=10)
         interval_entry.grid(row=2, column=1, padx=5, pady=2)
 
+        # Recommended settings label
+        ttk.Label(frame, text="Recommended failure rate 0.001 and check rate 300 seconds").grid(row=4, column=0, columnspan=2, padx=5, pady=10)
+        
         # Save settings button
         save_button = ttk.Button(frame, text="Save Settings", command=self.save_settings)
-        save_button.grid(row=3, column=0, columnspan=2, pady=10)
+        save_button.grid(row=5, column=0, columnspan=2, pady=10)
 
     def create_readme_page(self):
         frame = ttk.Frame(self.notebook)
@@ -144,8 +147,9 @@ class FailureInjectorApp:
 
     def toggle_injection(self):
         if not self.running:
+            # get user settings
             try:
-                # get user settings
+                # Use the variables directly
                 prob = float(self.probability_var.get())
                 interval = float(self.interval_var.get())
                 if not (0 <= prob <= 1):
@@ -212,6 +216,7 @@ class FailureInjectorApp:
 
     def save_settings(self):
         self.log("Settings saved.")
+        # Save settings if needed
 
     def load_failures(self):
         if os.path.exists(FAILURES_FILE):
