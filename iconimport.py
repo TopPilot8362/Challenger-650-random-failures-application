@@ -142,6 +142,8 @@ class FailureInjectorApp:
         self.running = False
         self.master.destroy()
 
+aircraft.ico
+
 if __name__ == "__main__":
     root = tk.Tk()
     root.iconbitmap('aircraft.ico')  # Set your icon here
